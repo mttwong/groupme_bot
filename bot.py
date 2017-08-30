@@ -3,31 +3,57 @@ from .secrets.py import bot_id
 import requests
 import dice
 
-app = Flask(__name__)
-
 url = 'https://api.groupme.com/v3/bots/post'
 
-def send_message(message):
-    data = {
-        'text': message,
-        'bot_id': bot_id,
-    }
-    requests.post(url, data=data)
+class GroupMeBot(Flask):
+    def __init__(self, name, key):
+        self.command = {} 
+        self.key = key 
+        super().__init__(name)
 
-commands = {}
+    def send_message(self, message):
+        data = {
+            'text': message,
+            'bot_id': self.key,
+        }
+        requests.post(url, data=data)
 
-def command(prefix):
-    def decorator(func):
-        commands[prefix] = func
-        return func
-    return decorator
+    def command(self, prefix):
+        def decorator(func):
+            self.commands[prefix] = func
+            return func
+        return decorator
 
-@command('echo')
+bot = GroupMeBot(__name__, bot_id)
+
+@bot.route('/', methods=['POST'])
+def index():
+    data = request.json
+
+    text = data['text']
+    if text.startswith('/'):
+        rest = text[1:]
+        args = rest.split()
+
+        if args[0] in bot.commands:
+            command = args[0]
+            bot.commands[command](args)
+            
+            print('ran {}'.format(command))
+            return 'ran {}'.format(command)
+        else:
+            print('unknown command')
+            return 'unknown command'
+
+    print('no command')
+    return 'no command'
+
+@bot.command('echo')
 def echo(args):
     message = ' '.join(args[1:])
     send_message(message)
 
-@command('roll')
+@bot.command('roll')
 def roll(args):
     dice_to_roll = args[1:]
     num_dice = len(dice_to_roll)
@@ -52,24 +78,3 @@ def roll(args):
             msg += '{}: {}\n'.format(outcome, out)
         send_message(msg[:-1])
 
-@app.route('/', methods=['POST'])
-def hello():
-    data = request.json
-
-    text = data['text']
-    if text.startswith('/'):
-        rest = text[1:]
-        args = rest.split()
-
-        if args[0] in commands:
-            command = args[0]
-            commands[command](args)
-            
-            print('ran {}'.format(command))
-            return 'ran {}'.format(command)
-        else:
-            print('unknown command')
-            return 'unknown command'
-
-    print('no command')
-    return 'no command'
