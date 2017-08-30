@@ -1,5 +1,5 @@
 from flask import Flask, request
-from .secrets.py import bot_id
+from .secrets import bot_id
 import requests
 import dice
 
@@ -7,7 +7,7 @@ url = 'https://api.groupme.com/v3/bots/post'
 
 class GroupMeBot(Flask):
     def __init__(self, name, key):
-        self.command = {} 
+        self.commands = {} 
         self.key = key 
         super().__init__(name)
 
@@ -51,7 +51,7 @@ def index():
 @bot.command('echo')
 def echo(args):
     message = ' '.join(args[1:])
-    send_message(message)
+    bot.send_message(message)
 
 @bot.command('roll')
 def roll(args):
@@ -59,22 +59,22 @@ def roll(args):
     num_dice = len(dice_to_roll)
 
     if num_dice == 0:
-        send_message('USAGE: /roll <dice_type> ...')
+        bot.send_message('USAGE: /roll <dice_type> ...')
     elif num_dice == 1:
         try:
             out = dice.roll(args[1])
         except dice.ParseException:
-            send_message("I didn't undserstand that...")
+            bot.send_message("I didn't undserstand that...")
 
         msg = 'Your roll is:\n{}: {}'.format(args[1], out)
-        send_message(msg)
+        bot.send_message(msg)
     else:
         msg = 'Your rolls are:\n'
         for outcome in args[1:]:
             try:
                 out = dice.roll(outcome)
             except dice.ParseException:
-                send_message("I didn't undserstand that...")
+                bot.send_message("I didn't undserstand that...")
             msg += '{}: {}\n'.format(outcome, out)
-        send_message(msg[:-1])
+        bot.send_message(msg[:-1])
 
